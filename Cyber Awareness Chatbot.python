@@ -1,0 +1,189 @@
+import colorama
+from colorama import Fore, Style
+import pyttsx3
+import re
+import requests
+import base64
+import dns.resolver
+
+VIRUSTOTAL_API_KEY = "YOUR_VIRUSTOTAL_API_KEY" 
+
+def cyber_awareness_topics():
+    print(Fore.RED + "\nChoose a topic to learn about Cyber Awareness:")
+    print(Fore.GREEN + "\n1. Phishing Scams")
+    print(Fore.BLUE + "\n2. Password Security")
+    print(Fore.YELLOW + "\n3. Data Privacy")
+    print(Fore.MAGENTA + "\n4. Malware")
+    print(Fore.CYAN + "\n5. Social Engineering")
+    print(Fore.LIGHTRED_EX + "\n6. Ransomware")  
+    print(Fore.LIGHTBLUE_EX + "\n7. Secure Browsing")  
+    print(Fore.LIGHTYELLOW_EX + "\n8. Two-Factor Authentication") 
+    print(Fore.GREEN + "\n9. Secure Email Practices")
+    print(Fore.MAGENTA + "\n10. Mobile Security") 
+    print(Fore.YELLOW + "\n11. Encryption")
+    print(Fore.GREEN + "\n12. Check to url for safety")
+    print(Fore.RED + "\n13. Exit")  
+
+def get_topic_info(topic):
+    if topic == "1":
+        return (Fore.YELLOW + "\nPhishing Scams:",
+                Fore.WHITE + "Phishing attempts to steal sensitive information like usernames, passwords, and credit card details by disguising as a trustworthy entity in electronic communication.",
+                Fore.RED + "Solutions:\n1. Verify email addresses and links before clicking.\n2. Use strong passwords.\n3. Keep software up-to-date.\n4. Use anti-virus software.\n5. Report suspicious activity.")
+    elif topic == "2":
+        return (Fore.GREEN + "\nPassword Security:",
+                Fore.WHITE + "Creating strong passwords is critical. Avoid using easily guessable information like your name or birthdate.",
+                Fore.RED + "Solutions:\n1. Use a mix of letters, numbers, and special characters.\n2. Consider a password manager for secure storage.")
+    elif topic == "3":
+        return(Fore.CYAN + "\nData Privacy:",
+               Fore.RED + "Data privacy protects your personal information. Avoid oversharing online.",
+               Fore.GREEN + "Solutions:\n1. Use privacy settings on social media.\n2. Avoid oversharing sensitive information.")
+    elif topic == "4":
+        return(Fore.MAGENTA + "\nMalware:",
+               Fore.RED + "Malware is designed to damage systems. It includes viruses, ransomware, and spyware.",
+               Fore.GREEN + "Solutions:\n1. Keep antivirus software updated.\n2. Avoid downloads/links from unknown sources.")
+    elif topic == "5":
+        return(Fore.BLUE + "\nSocial Engineering:",
+               Fore.WHITE + "Social engineering manipulates individuals into revealing confidential information.",
+               Fore.RED + "Solutions:\n1. Be cautious with unsolicited calls/emails.\n2. Verify identities before sharing sensitive information.")
+    elif topic == "6":  
+        return(Fore.LIGHTRED_EX + "\nRansomware:",
+               Fore.WHITE + "Ransomware encrypts your files and demands a ransom for their release.",
+               Fore.RED + "Solutions:\n1. Regularly back up your data.\n2. Keep your software updated.\n3. Be cautious of suspicious emails and attachments.")
+    elif topic == "7":  
+        return(Fore.LIGHTBLUE_EX + "\nSecure Browsing:",
+               Fore.WHITE + "Protect yourself while browsing by using secure websites and being aware of online threats.",
+               Fore.RED + "Solutions:\n1. Look for the HTTPS prefix in website URLs.\n2. Be cautious of clicking on ads or pop-ups.\n3. Use a reputable browser with built-in security features.")
+    elif topic == "8":  
+        return (Fore.LIGHTYELLOW_EX + "\nTwo-Factor Authentication:",
+                Fore.WHITE + "Two-factor authentication adds an extra layer of security to your accounts.",
+                Fore.RED + "Solutions:\n1. Enable two-factor authentication whenever possible.\n2. Use authenticator apps or security keys for stronger protection.")
+    elif topic == "9":
+        return (Fore.MAGENTA + "\nSecure Email Practices:",
+                Fore.WHITE + "Emails are a primary target for cybercriminals. It’s essential to protect sensitive information from being exposed through insecure email practices.",
+                Fore.RED + "Solutions:\n1. Avoid opening suspicious attachments.\n2. Use encrypted email services.\n3. Be careful with links in emails.")
+    elif topic == "10":
+        return(Fore.CYAN + "\nMobile Security:",
+               Fore.WHITE + "Mobile devices are vulnerable to attacks. Securing your phone is crucial to protect your data and privacy.",
+               Fore.RED + "Solutions:\n1. Set up a secure lock screen.\n2. Avoid downloading apps from unknown sources.\n3. Regularly update your mobile OS.")
+    elif topic == "11":
+        return(Fore.LIGHTYELLOW_EX + "\nEncryption:",
+               Fore.WHITE + "Encryption is the process of converting data into a code to prevent unauthorized access.",
+               Fore.RED + "Solutions:\n1. Use full-disk encryption on your devices.\n2. Encrypt sensitive files before sending them over the internet.")
+    
+    if user_input == "12": 
+            url = input("Enter a URL to check for safety: ")
+            if is_valid_url(url):
+                check_url_virustotal(url)
+            else:
+                print("Invalid URL format.")
+    else:
+        return None
+ 
+
+print(Style.BRIGHT + Fore.RED + "Welcome to the Cyber Awareness Chatbot!")    
+name = input("\nEnter your name: ")
+
+while True:
+        mobile_no = input("\nEnter your Mobile number (numbers only): ")
+        if not mobile_no.isdigit():  
+            print(Fore.RED + "Invalid input. Please enter numbers only for mobile number.")
+            continue  
+        break  
+    
+city = input("\nEnter your city: ")  
+while True:  
+        email_id = input("\nEnter your email ID: ")
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email_id):  
+            print(Fore.RED + "Invalid email format. Please enter a valid email ID.")
+            continue
+        break
+
+print(Fore.GREEN + "\nThank you for providing your details!")
+    
+def is_valid_email(email):
+    """Check if the email format is valid using regex."""
+    email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+    return re.match(email_regex, email)
+
+def check_email_domain(email):
+    """Check if the domain of the email exists."""
+    domain = email.split('@')[-1]
+    try:
+        dns.resolver.resolve(domain, 'MX')  
+        return True
+    except dns.resolver.NoAnswer:
+        return False
+    except dns.resolver.NXDOMAIN:
+        return False
+    except dns.exception.Timeout:
+        return False
+
+def email_checker(email):
+    if not is_valid_email(email):
+        return "Invalid email format."
+    
+    if check_email_domain(email):
+        return "This email domain seems legitimate."
+    else:
+        return "Warning: This email domain does not exist or is suspicious."
+
+email = input("Enter email to check for Safety: ")
+print(email_checker(email))
+       
+def is_valid_url(url):
+    """Check if the URL format is valid using regex."""
+    url_regex = r'^(http|https):\/\/[a-zA-Z0-9-._~:/?#\[\]@!$&\'()*+,;=%]+$'
+    return re.match(url_regex, url)
+
+def check_url_virustotal(url):
+    """Check URL safety using VirusTotal API."""
+    
+    if not is_valid_url(url):
+        print("Invalid URL format.")
+        return None
+    
+    url_endpoint = "https://www.virustotal.com/api/v3/urls/"
+    
+    encoded_url = requests.utils.quote(url)
+    
+    headers = {
+        "x-apikey": VIRUSTOTAL_API_KEY
+    }
+    
+    response = requests.get(url_endpoint + encoded_url, headers=headers)
+    
+    if response.status_code == 200:
+        result = response.json()
+        if result.get('data'):
+            analysis_id = result["data"]["id"]
+            print(f"Analysis ID: {analysis_id}")
+            return analysis_id
+        else:
+            print("No analysis result found.")
+            return None
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+        return None
+
+url = "http://example.com"
+check_url_virustotal(url)
+        
+if __name__ == "__main__":
+    while True:
+        cyber_awareness_topics()
+    
+        user_input = input("\nEnter the number to choose a topic: ")
+
+        topic_info = get_topic_info(user_input)
+
+        if topic_info:
+            print(topic_info[0])
+            print(topic_info[1])
+            print(topic_info[2])
+        elif user_input == "13":
+            print(Fore.GREEN + "\nThank you for using the Cyber Awareness Chatbot!")
+            break
+        else:
+            print(Fore.BLACK + Fore.GREEN + "Please choose a valid number between 1 and 12.")
+
+    
