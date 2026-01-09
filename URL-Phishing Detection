@@ -1,0 +1,194 @@
+import requests
+import ssl
+import socket
+from urllib.parse import urlparse
+from datetime import datetime
+import matplotlib.pyplot as plt
+
+
+VIRUSTOTAL_API_KEY = "50e397677f451629d1731486a68ff959a4e26d0e740c787a6d2c4b3c13ffd7d6"
+
+results = {"Secure (HTTPS)": 75, "Not Secure (HTTP)": 25}
+
+def is_https(url):
+    return url.lower().startswith("https://")
+
+def check_ssl_certificate(url):
+    """Check SSL certificate validity and expiration."""
+    try:
+        parsed_url = urlparse(url)
+        hostname = parsed_url.hostname
+        port = 443
+
+        ctx = ssl.create_default_context()
+        with socket.create_connection((hostname, port), timeout=5) as sock:
+            with ctx.wrap_socket(sock, server_hostname=hostname) as ssock:
+                cert = ssock.getpeercert()
+                exp_date_str = cert['notAfter']
+                exp_date = datetime.strptime(exp_date_str, "%b %d %H:%M:%S %Y %Z")
+                days_remaining = (exp_date - datetime.utcnow()).days
+
+                if days_remaining < 0:
+                    return (False, f"Expired {abs(days_remaining)} days ago")
+                else:
+                    return (True, f"Valid, expires in {days_remaining} days")
+    except Exception as e:
+        return (False, f"SSL Check Failed: {e}")
+
+def check_tls_version(url):
+    """Check TLS version."""
+    try:
+        parsed_url = urlparse(url)
+        hostname = parsed_url.hostname
+        port = 443
+
+        ctx = ssl.create_default_context()
+        with socket.create_connection((hostname, port), timeout=5) as sock:
+            with ctx.wrap_socket(sock, server_hostname=hostname) as ssock:
+                return ssock.version()
+    except Exception:
+        return "Unknown"
+
+def check_security_headers(url):
+    """Check important HTTP security headers."""
+    try:
+        response = requests.get(url, timeout=5, verify=False)
+        headers = response.headers
+        required_headers = [
+            "Content-Security-Policy",
+            "X-Frame-Options",
+            "X-Content-Type-Options",
+            "Strict-Transport-Security",
+            "Referrer-Policy"
+        ]
+        present = [h for h in required_headers if h in headers]
+        missing = [h for h in required_headers if h not in headers]
+        return (present, missing)
+    except Exception as e:
+        return ([], [f"Header Check Failed: {e}"])
+
+def virustotal_scan(url):
+    """Check URL reputation using VirusTotal API."""
+    try:
+        headers = {"x-apikey": VIRUSTOTAL_API_KEY}
+        response = requests.post(
+            "https://www.virustotal.com/api/v3/urls",
+            headers=headers,
+            data={"url": url}
+        )
+        if response.status_code == 200:
+            analysis_url = f"https://www.virustotal.com/gui/url/{response.json()['data']['id']}"
+            return f"Scan submitted. Check results: {analysis_url}"
+        else:
+            return f"VirusTotal API Error: {response.status_code} - {response.text}"
+    except Exception as e:
+        return f"VirusTotal Check Failed: {e}"
+
+def check_website_security(url):
+    if not url.startswith("http"):
+        url = "http://" + url
+
+    print(f"\n🔍 Checking security for: {url}")
+    secure = True
+
+    
+    if is_https(url):
+        print("✅ HTTPS: Yes")
+    else:
+        print("❌ HTTPS: No (Website is NOT SECURE)")
+        secure = False  
+
+    
+    if is_https(url):  
+        ssl_ok, ssl_msg = check_ssl_certificate(url)
+        print(f"{'✅' if ssl_ok else '❌'} SSL Certificate: {ssl_msg}")
+        if not ssl_ok:
+            secure = False
+    else:
+        print("⚠️ SSL Certificate: Skipped (not HTTP)")
+    if is_https(url):
+        tls_version = check_tls_version(url)
+        print(f"⚠️ TLS Version: {tls_version}")
+    else:
+        print("⚠️ TLS Version: Skipped (not HTTPS)")
+
+    present, missing = check_security_headers(url)
+    if present:
+        print(f"✅ Security Headers Found: {present}")
+    if missing:
+        print(f"❌ Missing Security Headers: {missing}")
+        secure = False
+
+    if VIRUSTOTAL_API_KEY != "YOUR_API_KEY_HERE":
+        vt_result = virustotal_scan(url)
+        print(f"VirusTotal: {vt_result}")
+    else:
+        print("VirusTotal API key not set. Skipping reputation check.")
+        
+def check_website_security():
+    url = input("Enter website URL (e.g. https://example.com): ").strip()
+
+   
+    if not url.startswith(("http://", "https://")):
+        url = "http://" + url  
+    parsed_url = urlparse(url)
+    hostname = parsed_url.hostname
+    scheme = parsed_url.scheme
+
+    if scheme == "https":
+        print("\n🔐 HTTPS Website is SECURE")
+        results["Secure (HTTPS)"] += 1
+        port = 443
+        try:
+            context = ssl.create_default_context()
+            with socket.create_connection((hostname, port), timeout=5) as sock:
+                with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+                    cert = ssock.getpeercert()
+                    tls_version = ssock.version()
+                    issuer = dict(x[0] for x in cert.get("issuer", ()))
+                    not_before = cert.get("notBefore")
+                    not_after = cert.get("notAfter")
+
+                    print(f"• TLS version: {tls_version}")
+                    print(f"• Certificate issuer: {issuer.get('organizationName', issuer.get('commonName', 'Unknown'))}")
+                    print(f"• Valid from: {not_before}")
+                    print(f"• Valid until: {not_after}")
+
+                    if not_after:
+                        expire_dt = datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z")
+                        days = (expire_dt - datetime.utcnow()).days
+                        print(f"• Days until expiration: {days}")
+        except Exception as e:
+            print(f"  (Error fetching certificate: {e})")
+
+    else:
+        print("\n❌ HTTP Website is NOT SECURE")
+        results["Not Secure (HTTP)"] += 1
+        print("• Data is sent in **plain text** — anyone can read it.")
+        print("• Vulnerable to **Man-in-the-Middle attacks**.")
+        print("• No TLS/SSL certificate protection.")
+        print("• Website identity cannot be verified.")
+
+
+def show_summary():
+    print("\n📊 Summary of Checked Websites:")
+    for status, count in results.items():
+        print(f"• {status}: {count}")
+
+    labels = list(results.keys())
+    sizes = list(results.values())
+    colors = ["#4CAF50", "#F44336"] 
+    # Green for secure, Red for insecure
+
+    plt.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90, colors=colors)
+    plt.axis("equal")
+    plt.title("Website Security Status")
+    plt.show()
+
+if __name__ == "__main__":
+    while True:
+        check_website_security()
+        more = input("\nDo you want to check another website? (yes/no): ").lower()
+        if more != "yes":
+            break
+    show_summary()
